@@ -1,0 +1,98 @@
+name: deploy
+
+on: push
+
+jobs:
+
+  create-binaries:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Install FFmpeg for Windows
+      env:
+        FFMPEG_URL: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z
+      run: |
+        $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+        Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+        Invoke-WebRequest "${env:FFMPEG_URL}" -OutFile ffmpeg-release-full-shared.7z
+        7z x ffmpeg-release-full-shared.7z
+        mkdir ffmpeg
+        mv ffmpeg-*/* ffmpeg/
+        Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
+        Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"
+
+    - name: Enable Link Time Optimizations
+      run: |
+        cd av_metrics_gui_tool
+        echo "[profile.release]" >> Cargo.toml
+        echo "lto = true" >> Cargo.toml
+
+    - name: Enable static CRT linkage
+      run: |
+        cd av_metrics_gui_tool
+        mkdir .cargo
+        echo '[target.x86_64-pc-windows-msvc]' >> .cargo/config
+        echo 'rustflags = ["-Ctarget-feature=+crt-static"]' >> .cargo/config
+
+    - name: Build gui tool
+      run: |
+        cd av_metrics_gui_tool
+        cargo build --release
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v1
+      with:
+        name: av-metrics-gui-ffmpeg
+        path: av_metrics_gui_tool/target/release/av-metrics-gui-tool
+
+#  deploy:
+#
+#    needs: create-binaries
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#
+#    - name: Download the zip
+#      uses: actions/download-artifact@v1
+#      with:
+#        name: av-metrics-bins
+#
+#    - name: Unzip av-metrics Windows binaries
+#      run: |
+#        unzip av-metrics-bins/av-metrics.zip -d av-metrics-bins
+#
+#    - name: Handle release data and files
+#      id: data
+#      run: |
+#        VERSION=$(head -n 1 CHANGELOG.md | tr -d "## Version ")
+#        FILENAME=av-metrics-$VERSION-windows-sdk
+#        echo "::set-output name=version::$VERSION"
+#        tail -n +2 CHANGELOG.md | sed -e '/^$/,$d' > CHANGELOG.txt
+#        cd av-metrics-bins
+#        mv local $FILENAME
+#        zip -r $FILENAME.zip $FILENAME
+#        strip av-metrics-tool.exe
+#        mv $FILENAME.zip av-metrics-tool.exe ..
+#
+#    - name: Create a release
+#      uses: softprops/action-gh-release@v1
+#      with:
+#        name: Version ${{ steps.data.outputs.version }}
+#        body_path: CHANGELOG.txt
+#        files: |
+#          av-metrics-${{ steps.data.outputs.version }}-windows-sdk.zip
+#          av-metrics-tool.exe
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
