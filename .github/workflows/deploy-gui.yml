@@ -1,4 +1,4 @@
-name: deploy
+name: deploy-gui
 
 on: push
 
@@ -47,13 +47,13 @@ jobs:
     - name: Build gui tool
       run: |
         cd av_metrics_gui_tool
-        cargo build --release
+        cargo build --release --features ffmpeg
 
     - name: Upload binaries
       uses: actions/upload-artifact@v1
       with:
         name: av-metrics-gui-ffmpeg
-        path: av_metrics_gui_tool/target/release/av-metrics-gui-tool
+        path: av_metrics_gui_tool/target/release/av-metrics-gui-tool.exe
 
 #  deploy:
 #
