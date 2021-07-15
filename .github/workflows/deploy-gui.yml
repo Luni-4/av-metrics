@@ -6,7 +6,7 @@ jobs:
 
   create-binaries:
 
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -18,18 +18,11 @@ jobs:
         toolchain: stable
         override: true
 
-    - name: Install FFmpeg for Windows
-      env:
-        FFMPEG_URL: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z
+    - name: Install FFmpeg for MacOS
       run: |
-        $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
-        Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
-        Invoke-WebRequest "${env:FFMPEG_URL}" -OutFile ffmpeg-release-full-shared.7z
-        7z x ffmpeg-release-full-shared.7z
-        mkdir ffmpeg
-        mv ffmpeg-*/* ffmpeg/
-        Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
-        Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"
+        export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)
+        sudo apt-get update
+        sudo apt-get install libavutil-dev libavcodec-dev libavformat-dev libclang-dev
 
     - name: Enable Link Time Optimizations
       run: |
@@ -41,7 +34,7 @@ jobs:
       run: |
         cd av_metrics_gui_tool
         mkdir .cargo
-        echo '[target.x86_64-pc-windows-msvc]' >> .cargo/config
+        echo '[target.x86_64-apple-darwin]' >> .cargo/config
         echo 'rustflags = ["-Ctarget-feature=+crt-static"]' >> .cargo/config
 
     - name: Build gui tool
@@ -52,8 +45,59 @@ jobs:
     - name: Upload binaries
       uses: actions/upload-artifact@v1
       with:
-        name: av-metrics-gui-ffmpeg
+        name: av-metrics-gui-ffmpeg-macos
         path: av_metrics_gui_tool/target/release/av-metrics-gui-tool.exe
+
+#  create-binaries:
+#
+#    runs-on: windows-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#
+#    - name: Install Rust
+#      uses: actions-rs/toolchain@v1
+#      with:
+#        profile: minimal
+#        toolchain: stable
+#        override: true
+#
+#    - name: Install FFmpeg for Windows
+#      env:
+#        FFMPEG_URL: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z
+#      run: |
+#        $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+#        Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+#        Invoke-WebRequest "${env:FFMPEG_URL}" -OutFile ffmpeg-release-full-shared.7z
+#        7z x ffmpeg-release-full-shared.7z
+#        mkdir ffmpeg
+#        mv ffmpeg-*/* ffmpeg/
+#        Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
+#        Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"
+#
+#    - name: Enable Link Time Optimizations
+#      run: |
+#        cd av_metrics_gui_tool
+#        echo "[profile.release]" >> Cargo.toml
+#        echo "lto = true" >> Cargo.toml
+#
+#    - name: Enable static CRT linkage
+#      run: |
+#        cd av_metrics_gui_tool
+#        mkdir .cargo
+#        echo '[target.x86_64-pc-windows-msvc]' >> .cargo/config
+#        echo 'rustflags = ["-Ctarget-feature=+crt-static"]' >> .cargo/config
+#
+#    - name: Build gui tool
+#      run: |
+#        cd av_metrics_gui_tool
+#        cargo build --release --features ffmpeg
+#
+#    - name: Upload binaries
+#      uses: actions/upload-artifact@v1
+#      with:
+#        name: av-metrics-gui-ffmpeg-windows
+#        path: av_metrics_gui_tool/target/release/av-metrics-gui-tool.exe
 
 #  deploy:
 #
