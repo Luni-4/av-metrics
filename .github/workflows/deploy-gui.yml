@@ -8,8 +8,91 @@ jobs:
 
     runs-on: macos-latest
 
+    env:
+      DAV1D_DIR: dav1d-dir
+      OGG_DIR: ogg-dir
+      VORBIS_DIR: vorbis-dir
+      VPX_DIR: vpx-dir
+      FFMPEG_DIR: ffmpeg-dir
+
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install nasm
+      uses: ilammy/setup-nasm@v1
+
+    - name: Install meson and ninja
+      run: |
+        pip install meson ninja
+
+    - name: Install dav1d
+      run: |
+        git clone --depth 1 https://code.videolan.org/videolan/dav1d.git
+        cd dav1d
+        meson build \
+              -Ddefault_library=static \
+              -Denable_tools=false \
+              -Denable_tests=false \
+              -Dtestdata_tools=false \
+              --buildtype release \
+        ninja -C build
+        ninja -C build install
+
+    - name: Install ogg
+      run: |
+        git clone --depth 1 https://github.com/xiph/ogg
+        cd ogg
+        ./autogen.sh
+        ./configure --disable-shared \
+                    --enable-pic
+        make -j12 install
+
+    - name: Install vorbis
+      run: |
+        git clone --depth 1 https://github.com/xiph/vorbis
+        cd vorbis
+        ./autogen.sh
+        ./configure --disable-shared \
+                    --enable-pic
+        make -j12 install
+
+    - name: Install vpx
+      run: |
+        git clone --depth 1 https://github.com/webmproject/libvpx.git
+        cd libvpx
+        ./configure --disable-shared \
+                    --enable-pic \
+                    --disable-vp8-encoder \
+                    --disable-vp9-encoder \
+                    --enable-internal-stats \
+                    --disable-examples \
+                    --disable-tools \
+                    --disable-docs \
+                    --disable-unit-tests
+        make -j12 install
+
+    - name: Install ffmpeg
+      env:
+        LINK: https://github.com/FFmpeg/FFmpeg.git
+      run: |
+        export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)
+        git clone --depth 1 $LINK
+        cd FFmpeg
+        ./configure --disable-autodetect \
+                    --disable-bsfs \
+                    --disable-doc \
+                    --disable-encoders \
+                    --disable-filters \
+                    --disable-muxers \
+                    --disable-outdevs \
+                    --disable-programs \
+                    --enable-gpl \
+                    --enable-libvpx \
+                    --enable-libdav1d \
+                    --enable-libvorbis \
+                    --enable-pic \
+                    --arch=x86_64
+        make -j12 install
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -17,12 +100,6 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-
-    - name: Install FFmpeg for MacOS
-      run: |
-        export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)
-        sudo apt-get update
-        sudo apt-get install libavutil-dev libavcodec-dev libavformat-dev libclang-dev
 
     - name: Enable Link Time Optimizations
       run: |
