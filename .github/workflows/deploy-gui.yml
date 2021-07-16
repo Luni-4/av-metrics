@@ -8,13 +8,6 @@ jobs:
 
     runs-on: macos-latest
 
-    env:
-      DAV1D_DIR: dav1d-dir
-      OGG_DIR: ogg-dir
-      VORBIS_DIR: vorbis-dir
-      VPX_DIR: vpx-dir
-      FFMPEG_DIR: ffmpeg-dir
-
     steps:
     - uses: actions/checkout@v2
 
@@ -71,13 +64,7 @@ jobs:
         curl -L $LINK -o temp.zip
         7z x temp.zip -y
         cd FFmpeg-*
-        ./configure --disable-autodetect \
-                    --disable-bsfs \
-                    --disable-doc \
-                    --disable-encoders \
-                    --disable-filters \
-                    --disable-muxers \
-                    --disable-outdevs \
+        ./configure --disable-doc \
                     --disable-programs \
                     --disable-shared \
                     --enable-gpl \
@@ -112,6 +99,10 @@ jobs:
       run: |
         cd av_metrics_gui_tool
         cargo build --release --features ffmpeg
+
+    - name: Strip av-metrics-gui-tool
+      run: |
+        strip av_metrics_gui_tool/target/release/av-metrics-gui-tool
 
     - name: Upload binaries
       uses: actions/upload-artifact@v1
