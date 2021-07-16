@@ -37,7 +37,7 @@ jobs:
               -Denable_tools=false \
               -Denable_tests=false \
               -Dtestdata_tools=false \
-              --buildtype release \
+              --buildtype release
         ninja -C build
         ninja -C build install
 
