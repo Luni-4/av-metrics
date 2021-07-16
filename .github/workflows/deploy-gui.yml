@@ -21,12 +21,9 @@ jobs:
     - name: Install nasm
       uses: ilammy/setup-nasm@v1
 
-    - name: Install Python
-      uses: actions/setup-python@v2
-
     - name: Install meson and ninja
       run: |
-        pip install meson ninja
+        brew install meson ninja
 
     - name: Install autoreconf
       run: |
@@ -49,8 +46,7 @@ jobs:
         git clone --depth 1 https://github.com/xiph/ogg
         cd ogg
         ./autogen.sh
-        ./configure --disable-shared \
-                    --enable-pic
+        ./configure --disable-shared
         make -j12 install
 
     - name: Install vorbis
@@ -62,20 +58,10 @@ jobs:
                     --enable-pic
         make -j12 install
 
+    # Brew install static libvpx
     - name: Install vpx
       run: |
-        git clone --depth 1 https://github.com/webmproject/libvpx.git
-        cd libvpx
-        ./configure --disable-shared \
-                    --enable-pic \
-                    --disable-vp8-encoder \
-                    --disable-vp9-encoder \
-                    --enable-internal-stats \
-                    --disable-examples \
-                    --disable-tools \
-                    --disable-docs \
-                    --disable-unit-tests
-        make -j12 install
+        brew install libvpx
 
     - name: Install FFmpeg 4.4
       env:
@@ -83,7 +69,7 @@ jobs:
       run: |
         export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)
         curl -L $LINK -o temp.zip
-        7z x temp.zip
+        7z x temp.zip -y
         cd FFmpeg-*
         ./configure --disable-autodetect \
                     --disable-bsfs \
